@@ -1,3 +1,4 @@
+from history import record_transaction
 
 def create_session(players, bet, salami_amount, four_pairs_kitti):
     """
@@ -37,39 +38,45 @@ def create_session(players, bet, salami_amount, four_pairs_kitti):
         "pool": initial_pool,
         "kitti_count": 0,
         "balances": balances,
+        "history": [],
         "active": True
     }
 
     return session
 
 
+
 def add_kitti(session):
     """
-    Adds one Kitti to the game.
-    Every player contributes the initial bet again.
+    Adds one Kitti and records the transaction.
     """
 
     if not session["active"]:
         raise ValueError("This game session has ended.")
 
     bet = session["bet"]
+    total_contribution = len(session["players"]) * bet
 
-    # Add another contribution from every player
     for player in session["players"]:
         session["balances"][player] -= bet
 
-    # Increase the prize pool
-    session["pool"] += len(session["players"]) * bet
-
-    # Increase Kitti count
+    session["pool"] += total_contribution
     session["kitti_count"] += 1
+
+    record_transaction(
+        session,
+        "Kitti",
+        total_contribution,
+        f"All {len(session['players'])} players contributed Rs. {bet}"
+    )
 
     return session
 
 
+
 def normal_win(session, winner):
     """
-    Ends the game and awards the entire pool to the winner.
+    Ends the game and records a normal win.
     """
 
     if not session["active"]:
@@ -78,14 +85,21 @@ def normal_win(session, winner):
     if winner not in session["players"]:
         raise ValueError("Invalid winner.")
 
-    # Award the entire pool to the winner
-    session["balances"][winner] += session["pool"]
+    prize = session["pool"]
 
-    # Empty the pool and end the game
+    session["balances"][winner] += prize
     session["pool"] = 0
     session["active"] = False
 
+    record_transaction(
+        session,
+        "Normal Win",
+        prize,
+        f"{winner} won the game and received Rs. {prize}"
+    )
+
     return session
+
 
     
 def salami_win(session, winner):
@@ -116,11 +130,9 @@ def salami_win(session, winner):
 
     return session
 
-    
 def four_of_a_kind_win(session, winner, rank):
     """
-    Ends the game when a player gets four cards of the same rank.
-    Four Aces receive Salami; other ranks receive only the pool.
+    Handles four of a kind and records the result.
     """
 
     if not session["active"]:
@@ -129,32 +141,42 @@ def four_of_a_kind_win(session, winner, rank):
     if winner not in session["players"]:
         raise ValueError("Invalid winner.")
 
-    if rank not in [
+    valid_ranks = [
         "Ace", "King", "Queen", "Jack",
         "10", "9", "8", "7", "6", "5", "4", "3", "2"
-    ]:
+    ]
+
+    if rank not in valid_ranks:
         raise ValueError("Invalid card rank.")
 
-    # Four Aces receive Salami
+    salami = 0
+
     if rank == "Ace":
         salami = (len(session["players"]) - 1) * session["salami_amount"]
 
         for player in session["players"]:
             if player != winner:
                 session["balances"][player] -= session["salami_amount"]
-    else:
-        salami = 0
 
-    # Award pool and any applicable Salami
-    session["balances"][winner] += session["pool"] + salami
+    prize = session["pool"] + salami
 
-    # End the game
+    session["balances"][winner] += prize
+
     session["pool"] = 0
     session["active"] = False
 
+    transaction_type = "Four Aces Win" if rank == "Ace" else "Four of a Kind Win"
+
+    record_transaction(
+        session,
+        transaction_type,
+        prize,
+        f"{winner} won with four {rank}s"
+    )
+
     return session
 
-    
+
 def four_pairs(session):
     """
     Handles a cancelled game caused by four pairs.
@@ -163,12 +185,37 @@ def four_pairs(session):
     if not session["active"]:
         raise ValueError("This game session has ended.")
 
-    # Check the Four Pairs setting
     if session["four_pairs_kitti"]:
         add_kitti(session)
 
-    # Game continues with the existing pool
+        record_transaction(
+            session,
+            "Four Pairs",
+            0,
+            "Game cancelled. Kitti added according to session settings."
+        )
+    else:
+        record_transaction(
+            session,
+            "Four Pairs",
+            0,
+            "Game cancelled. No additional Kitti added."
+        )
+
     return session
+    
+def check_balances(session):
+    """
+    Checks whether all player balances add up to zero.
+    """
+
+    total_balance = sum(session["balances"].values())
+
+    if total_balance == 0:
+        return True
+
+    return False
+
 
 
 

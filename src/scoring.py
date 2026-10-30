@@ -1,3 +1,4 @@
+
 from history import record_transaction
 
 def create_session(players, bet, salami_amount, four_pairs_kitti):

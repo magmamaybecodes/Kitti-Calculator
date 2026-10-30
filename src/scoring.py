@@ -1,38 +1,48 @@
 
 from history import record_transaction
 
+
 def create_session(players, bet, salami_amount, four_pairs_kitti):
     """
     Creates a new Kitti game session.
     """
 
-    # Validate player count
-    if len(players) < 2:
+    # Validate players
+    if not isinstance(players, (list, tuple)) or len(players) < 2:
         raise ValueError("A game needs at least 2 players.")
 
-    # Validate player names
+    if any(not isinstance(name, str) or not name.strip() for name in players):
+        raise ValueError("Player names must be non-empty text.")
+
+    # Remove accidental spaces around names
+    players = [name.strip() for name in players]
+
     if len(set(players)) != len(players):
         raise ValueError("Player names must be unique.")
 
-    if any(not name.strip() for name in players):
-        raise ValueError("Player names cannot be empty.")
+    # Validate whole-rupee amounts
+    if type(bet) is not int or bet <= 0:
+        raise ValueError("Bet must be a positive whole number.")
 
-    # Validate amounts
-    if bet <= 0 or salami_amount < 0:
-        raise ValueError("Invalid bet or Salami amount.")
+    if type(salami_amount) is not int or salami_amount < 0:
+        raise ValueError("Salami amount must be a non-negative whole number.")
+
+    # Validate Four Pairs setting
+    if type(four_pairs_kitti) is not bool:
+        raise ValueError("Four Pairs setting must be True or False.")
 
     # Calculate initial pool
     initial_pool = len(players) * bet
 
     # Create player balances
-    balances = {}
-
-    for player in players:
-        balances[player] = -bet
+    balances = {
+        player: -bet
+        for player in players
+    }
 
     # Create session
     session = {
-        "players": players,
+        "players": players.copy(),
         "bet": bet,
         "salami_amount": salami_amount,
         "four_pairs_kitti": four_pairs_kitti,
@@ -103,6 +113,7 @@ def normal_win(session, winner):
 
 
     
+
 def salami_win(session, winner):
     """
     Ends the game and awards the pool plus Salami to the winner.
@@ -122,14 +133,24 @@ def salami_win(session, winner):
         if player != winner:
             session["balances"][player] -= session["salami_amount"]
 
-    # Award pool and Salami to the winner
-    session["balances"][winner] += session["pool"] + salami
+    # Calculate and award total prize
+    prize = session["pool"] + salami
+    session["balances"][winner] += prize
 
     # End the game
     session["pool"] = 0
     session["active"] = False
 
+    # Record the transaction
+    record_transaction(
+        session,
+        "Salami Win",
+        prize,
+        f"{winner} won the pool and received Rs. {salami} in Salami"
+    )
+
     return session
+
 
 def four_of_a_kind_win(session, winner, rank):
     """
@@ -207,15 +228,15 @@ def four_pairs(session):
     
 def check_balances(session):
     """
-    Checks whether all player balances add up to zero.
+    Checks whether player balances and the pool are consistent.
     """
 
     total_balance = sum(session["balances"].values())
 
-    if total_balance == 0:
-        return True
+    if session["active"]:
+        return total_balance + session["pool"] == 0
 
-    return False
+    return session["pool"] == 0 and total_balance == 0
 
 
 

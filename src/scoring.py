@@ -86,3 +86,89 @@ def normal_win(session, winner):
     session["active"] = False
 
     return session
+
+    
+def salami_win(session, winner):
+    """
+    Ends the game and awards the pool plus Salami to the winner.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has already ended.")
+
+    if winner not in session["players"]:
+        raise ValueError("Invalid winner.")
+
+    # Calculate additional Salami
+    salami = (len(session["players"]) - 1) * session["salami_amount"]
+
+    # Deduct Salami from every other player
+    for player in session["players"]:
+        if player != winner:
+            session["balances"][player] -= session["salami_amount"]
+
+    # Award pool and Salami to the winner
+    session["balances"][winner] += session["pool"] + salami
+
+    # End the game
+    session["pool"] = 0
+    session["active"] = False
+
+    return session
+
+    
+def four_of_a_kind_win(session, winner, rank):
+    """
+    Ends the game when a player gets four cards of the same rank.
+    Four Aces receive Salami; other ranks receive only the pool.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has already ended.")
+
+    if winner not in session["players"]:
+        raise ValueError("Invalid winner.")
+
+    if rank not in [
+        "Ace", "King", "Queen", "Jack",
+        "10", "9", "8", "7", "6", "5", "4", "3", "2"
+    ]:
+        raise ValueError("Invalid card rank.")
+
+    # Four Aces receive Salami
+    if rank == "Ace":
+        salami = (len(session["players"]) - 1) * session["salami_amount"]
+
+        for player in session["players"]:
+            if player != winner:
+                session["balances"][player] -= session["salami_amount"]
+    else:
+        salami = 0
+
+    # Award pool and any applicable Salami
+    session["balances"][winner] += session["pool"] + salami
+
+    # End the game
+    session["pool"] = 0
+    session["active"] = False
+
+    return session
+
+    
+def four_pairs(session):
+    """
+    Handles a cancelled game caused by four pairs.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has ended.")
+
+    # Check the Four Pairs setting
+    if session["four_pairs_kitti"]:
+        add_kitti(session)
+
+    # Game continues with the existing pool
+    return session
+
+
+

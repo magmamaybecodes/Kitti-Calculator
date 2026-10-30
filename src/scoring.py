@@ -41,3 +41,48 @@ def create_session(players, bet, salami_amount, four_pairs_kitti):
     }
 
     return session
+
+
+def add_kitti(session):
+    """
+    Adds one Kitti to the game.
+    Every player contributes the initial bet again.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has ended.")
+
+    bet = session["bet"]
+
+    # Add another contribution from every player
+    for player in session["players"]:
+        session["balances"][player] -= bet
+
+    # Increase the prize pool
+    session["pool"] += len(session["players"]) * bet
+
+    # Increase Kitti count
+    session["kitti_count"] += 1
+
+    return session
+
+
+def normal_win(session, winner):
+    """
+    Ends the game and awards the entire pool to the winner.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has already ended.")
+
+    if winner not in session["players"]:
+        raise ValueError("Invalid winner.")
+
+    # Award the entire pool to the winner
+    session["balances"][winner] += session["pool"]
+
+    # Empty the pool and end the game
+    session["pool"] = 0
+    session["active"] = False
+
+    return session

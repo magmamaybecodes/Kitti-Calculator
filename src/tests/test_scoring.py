@@ -179,5 +179,14 @@ class TestKittiScoring(unittest.TestCase):
         with self.assertRaises(ValueError):
             fold_player(self.game, "Player 1")
 
+    def test_kitti_resets_folded_players(self):
+        fold_player(self.game, "Player 1")
+
+        add_kitti(self.game)
+
+        self.assertEqual(self.game["folded_players"], [])
+        self.assertEqual(self.game["pool"], 100)
+        self.assertEqual(self.game["balances"]["Player 1"], -20)
+
 if __name__ == "__main__":
     unittest.main()

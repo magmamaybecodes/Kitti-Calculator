@@ -108,6 +108,7 @@ def add_kitti(session):
         total_contribution,
         f"All {len(session['players'])} players contributed Rs. {bet}"
     )
+    session["folded_players"] = []
 
     return session
 

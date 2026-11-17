@@ -1,4 +1,4 @@
-
+from scoring import create_session
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.metrics import dp, sp
@@ -9,6 +9,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.switch import Switch
 from kivy.uix.scrollview import ScrollView
+from dashboard import GameDashboard
 
 
 Window.size = (420, 760)
@@ -146,36 +147,31 @@ class KittiApp(App):
             valign="middle"
         )
 
+    
     def check_settings(self, instance):
         players = [
             name.strip()
             for name in self.players_input.text.split(",")
             if name.strip()
-        ]
+    ]
 
-        if len(players) < 2:
-            self.status_label.text = "Please enter at least 2 players."
-            return
+        try:
+            bet = int(self.bet_input.text)
+            salami = int(self.salami_input.text)
 
-        if len(set(players)) != len(players):
-            self.status_label.text = "Player names must be unique."
-            return
+            # Create the actual game session
+            self.session = create_session(
+                players=players,
+                bet=bet,
+                salami_amount=salami,
+                four_pairs_kitti=self.four_pairs_switch.active
+            )
 
-        if not self.bet_input.text or int(self.bet_input.text) <= 0:
-            self.status_label.text = "Enter a valid positive Bot amount."
-            return
+            self.root.clear_widgets()
+            self.root.add_widget(GameDashboard(self.session))
 
-        if not self.salami_input.text:
-            self.status_label.text = "Enter a Salami amount."
-            return
-
-        self.status_label.text = (
-            f"Players: {len(players)}\n"
-            f"Initial Pool: Rs. {len(players) * int(self.bet_input.text)}\n"
-            f"Four Pairs Kitti: "
-            f"{'ON' if self.four_pairs_switch.active else 'OFF'}"
-        )
-
+        except ValueError as error:
+            self.status_label.text = str(error)
 
 if __name__ == "__main__":
     KittiApp().run()

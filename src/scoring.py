@@ -189,6 +189,7 @@ def salami_win(session, winner):
 
     return session
 
+
 def four_of_a_kind_win(session, winner, rank):
     """
     Handles four of a kind and records the result.
@@ -214,11 +215,16 @@ def four_of_a_kind_win(session, winner, rank):
     salami = 0
 
     if rank == "Ace":
-        salami = (len(session["players"]) - 1) * session["salami_amount"]
+        eligible_players = [
+            player
+            for player in session["players"]
+            if player != winner and player not in session["folded_players"]
+        ]
 
-        for player in session["players"]:
-            if player != winner:
-                session["balances"][player] -= session["salami_amount"]
+        salami = len(eligible_players) * session["salami_amount"]
+
+        for player in eligible_players:
+            session["balances"][player] -= session["salami_amount"]
 
     prize = session["pool"] + salami
 
@@ -263,6 +269,8 @@ def four_pairs(session):
             0,
             "Game cancelled. No additional Kitti added."
         )
+
+        session["folded_players"] = []
 
     return session
     

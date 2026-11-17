@@ -187,6 +187,70 @@ class TestKittiScoring(unittest.TestCase):
         self.assertEqual(self.game["folded_players"], [])
         self.assertEqual(self.game["pool"], 100)
         self.assertEqual(self.game["balances"]["Player 1"], -20)
+    
+    def test_four_pairs_kitti_on_resets_folded_players(self):
+        fold_player(self.game, "Player 1")
+
+        four_pairs(self.game)
+
+        self.assertEqual(self.game["folded_players"], [])
+        self.assertEqual(self.game["pool"], 100)
+        self.assertEqual(self.game["balances"]["Player 1"], -20)
+
+
+    def test_four_pairs_kitti_off_resets_folded_players(self):
+        self.game["four_pairs_kitti"] = False
+
+        fold_player(self.game, "Player 1")
+
+        four_pairs(self.game)
+
+        self.assertEqual(self.game["folded_players"], [])
+        self.assertEqual(self.game["pool"], 50)
+        self.assertEqual(self.game["balances"]["Player 1"], -10)
+    
+    def test_four_aces_excludes_folded_players_from_salami(self):
+        fold_player(self.game, "Player 1")
+
+        four_of_a_kind_win(self.game, "Player 2", "Ace")
+
+        # Player 1 folded, so they pay no Salami
+        self.assertEqual(self.game["balances"]["Player 1"], -10)
+
+        # Players 3, 4 and 5 each pay Rs. 10
+        self.assertEqual(self.game["balances"]["Player 3"], -20)
+        self.assertEqual(self.game["balances"]["Player 4"], -20)
+        self.assertEqual(self.game["balances"]["Player 5"], -20)
+
+        # Player 2 receives the pool plus Rs. 30 Salami
+        self.assertEqual(self.game["balances"]["Player 2"], 70)
+        self.assertEqual(self.game["pool"], 0)
+        self.assertFalse(self.game["active"])
+    
+    def test_folded_player_cannot_win_four_aces(self):
+        fold_player(self.game, "Player 1")
+
+        with self.assertRaises(ValueError):
+            four_of_a_kind_win(self.game, "Player 1", "Ace")
+    
+    def test_folded_player_cannot_win_four_kings(self):
+        fold_player(self.game, "Player 1")
+
+        with self.assertRaises(ValueError):
+            four_of_a_kind_win(self.game, "Player 1", "King")
+    
+    def test_folded_player_cannot_win_normal_game(self):
+        fold_player(self.game, "Player 1")
+
+        with self.assertRaises(ValueError):
+            normal_win(self.game, "Player 1")
+
+
+    def test_folded_player_cannot_win_salami(self):
+        fold_player(self.game, "Player 1")
+
+        with self.assertRaises(ValueError):
+            salami_win(self.game, "Player 1")
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,10 +50,38 @@ def create_session(players, bet, salami_amount, four_pairs_kitti):
         "kitti_count": 0,
         "balances": balances,
         "history": [],
+        "folded_players": [],
         "active": True
     }
 
     return session
+
+
+def fold_player(session, player):
+    """
+    Marks a player as folded for the current round.
+    """
+
+    if not session["active"]:
+        raise ValueError("This game session has ended.")
+
+    if player not in session["players"]:
+        raise ValueError("Invalid player.")
+
+    if player in session["folded_players"]:
+        raise ValueError("Player has already folded.")
+
+    session["folded_players"].append(player)
+
+    record_transaction(
+        session,
+        "Fold",
+        0,
+        f"{player} folded for the current round."
+    )
+
+    return session
+
 
 
 
@@ -95,6 +123,9 @@ def normal_win(session, winner):
 
     if winner not in session["players"]:
         raise ValueError("Invalid winner.")
+    
+    if winner in session["folded_players"]:
+        raise ValueError("A folded player cannot win.")
 
     prize = session["pool"]
 
@@ -111,9 +142,6 @@ def normal_win(session, winner):
 
     return session
 
-
-    
-
 def salami_win(session, winner):
     """
     Ends the game and awards the pool plus Salami to the winner.
@@ -125,15 +153,24 @@ def salami_win(session, winner):
     if winner not in session["players"]:
         raise ValueError("Invalid winner.")
 
-    # Calculate additional Salami
-    salami = (len(session["players"]) - 1) * session["salami_amount"]
+    if winner in session["folded_players"]:
+        raise ValueError("A folded player cannot win.")
 
-    # Deduct Salami from every other player
-    for player in session["players"]:
-        if player != winner:
-            session["balances"][player] -= session["salami_amount"]
+    # Get opponents who have not folded
+    eligible_players = [
+        player
+        for player in session["players"]
+        if player != winner and player not in session["folded_players"]
+    ]
 
-    # Calculate and award total prize
+    # Calculate Salami
+    salami = len(eligible_players) * session["salami_amount"]
+
+    # Deduct Salami from eligible players only
+    for player in eligible_players:
+        session["balances"][player] -= session["salami_amount"]
+
+    # Award the pool and Salami to the winner
     prize = session["pool"] + salami
     session["balances"][winner] += prize
 
@@ -151,7 +188,6 @@ def salami_win(session, winner):
 
     return session
 
-
 def four_of_a_kind_win(session, winner, rank):
     """
     Handles four of a kind and records the result.
@@ -162,6 +198,9 @@ def four_of_a_kind_win(session, winner, rank):
 
     if winner not in session["players"]:
         raise ValueError("Invalid winner.")
+
+    if winner in session["folded_players"]:
+        raise ValueError("A folded player cannot win.")
 
     valid_ranks = [
         "Ace", "King", "Queen", "Jack",

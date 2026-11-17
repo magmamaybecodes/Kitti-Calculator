@@ -8,7 +8,8 @@ from scoring import (
     salami_win,
     four_of_a_kind_win,
     four_pairs,
-    check_balances
+    check_balances,
+    fold_player
 )
 
 
@@ -165,6 +166,18 @@ class TestKittiScoring(unittest.TestCase):
     def test_invalid_four_pairs_setting(self):
         with self.assertRaises(ValueError):
             create_session(self.players, 10, 10, "yes")
+
+    def test_fold_player(self):
+        fold_player(self.game, "Player 1")
+
+        self.assertIn("Player 1", self.game["folded_players"])
+        self.assertEqual(self.game["history"][-1]["type"], "Fold")
+
+    def test_cannot_fold_twice(self):
+        fold_player(self.game, "Player 1")
+
+        with self.assertRaises(ValueError):
+            fold_player(self.game, "Player 1")
 
 if __name__ == "__main__":
     unittest.main()
